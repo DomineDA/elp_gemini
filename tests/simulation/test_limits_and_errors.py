@@ -411,3 +411,21 @@ def test_create_session_rejects_whitespace_teacher_prompt(ready):
         },
     )
     assert r.status_code == 422
+
+
+def test_get_session_with_legacy_whitespace_phase_is_200(ready, tmp_path):
+    # 입력 strip 이전에 저장된 공백 국면도 응답 모델이 그대로 읽어야 한다.
+    state, _ = _create(ready)
+    sid = state["session"]["id"]
+    conn = sqlite3.connect(tmp_path / "sim.db")
+    with conn:
+        conn.execute(
+            "UPDATE simulation_phases SET name='   ', teacher_prompt='   '"
+            " WHERE session_id=? AND idx=0",
+            (sid,),
+        )
+    conn.close()
+
+    r = ready.get(_api(sid))
+    assert r.status_code == 200
+    assert r.json()["phases"][0]["teacher_prompt"] == "   "

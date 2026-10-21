@@ -50,6 +50,9 @@ class PhaseIn(BaseModel):
 
 
 class Phase(PhaseIn):
+    # 출력 모델: strip 이전에 저장된 공백 국면도 읽을 수 있어야 한다.
+    model_config = ConfigDict(str_strip_whitespace=False)
+
     idx: int
 
 
