@@ -379,3 +379,35 @@ def test_say_accepts_a_full_length_plan_prompt(ready):
     )
     too_long = ready.post(_api(sid, "/say"), json={"content": "가" * 2001})
     assert too_long.status_code == 422
+
+
+def test_say_whitespace_only_is_422_and_persists_nothing(ready, fake_gemini):
+    state, _ = _create(ready)
+    sid = state["session"]["id"]
+    ready.post(_api(sid, "/phases/0/enter"))
+    before = ready.get(_api(sid)).json()
+    calls = fake_gemini.count("student")
+
+    r = ready.post(_api(sid, "/say"), json={"content": "   "})
+    assert r.status_code == 422
+
+    after = ready.get(_api(sid)).json()
+    assert _teachers(after) == _teachers(before)
+    assert after["session"]["teacher_turns_used"] == 0
+    assert fake_gemini.count("student") == calls
+
+
+def test_create_session_rejects_whitespace_teacher_prompt(ready):
+    cands = ready.get(
+        "/api/simulation/candidates", params={"n": 4, "seed": 7}
+    ).json()["candidates"]
+    r = ready.post(
+        "/api/simulation/sessions",
+        json={
+            "personas": [
+                {"ref": c["ref"], "pseudonym": c["pseudonym"]} for c in cands
+            ],
+            "phases": [{"name": "도입", "teacher_prompt": " "}],
+        },
+    )
+    assert r.status_code == 422

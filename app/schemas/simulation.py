@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import settings
 from app.services.simulation.persona_pool import MIN_PERSONAS
@@ -37,6 +37,8 @@ class CandidatesResponse(BaseModel):
 
 class PhaseIn(BaseModel):
     """설정 화면에서 편집한 국면 1개"""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str = Field(min_length=1, max_length=50)
     minutes: int | None = Field(None, ge=0, le=180)
@@ -151,6 +153,8 @@ class TurnResult(BaseModel):
 
 class SayRequest(BaseModel):
     """target_persona_id가 없으면 전체에게"""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     content: str = Field(min_length=1, max_length=TEACHER_PROMPT_MAX)
     target_persona_id: int | None = None
