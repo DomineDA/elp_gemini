@@ -259,6 +259,8 @@ async def upload_document(
         )
 
     except Exception as e:
+        # get_db 가 정상 반환을 commit 하므로 flush 된 업로드 행을 되돌린다.
+        await db.rollback()
         file_path.unlink(missing_ok=True)
         logger.error(f"문서 처리 실패: {str(e)}", exc_info=True)
         return templates.TemplateResponse(

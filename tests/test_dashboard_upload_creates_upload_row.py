@@ -197,3 +197,28 @@ async def test_dashboard_upload_failure_removes_file_and_hides_error(
     assert res.status_code == 500
     assert "secret internal detail" not in res.text
     assert _uploaded_files(tmp_path) == []
+
+
+@pytest.mark.asyncio
+async def test_dashboard_upload_failure_after_flush_rolls_back_row(
+    client, tmp_path
+):
+    # get_db 는 정상 반환을 commit 하므로 실패 시 flush 된 행도 남으면 안 된다.
+    c, session_factory = client
+    files = {"file": ("plan.pdf", BytesIO(b"%PDF-1.4\n"), "application/pdf")}
+
+    with (
+        patch("app.routers.views.PdfReader") as mock_reader,
+        patch(
+            "app.routers.views.CriteriaRepository.get_active_criteria",
+            AsyncMock(side_effect=RuntimeError("boom")),
+        ),
+    ):
+        mock_reader.return_value.pages = []
+        res = await c.post("/dashboard/upload", files=files)
+
+    assert res.status_code == 500
+    assert _uploaded_files(tmp_path) == []
+    async with session_factory() as s:
+        rows = (await s.execute(select(LessonPlanUpload))).scalars().all()
+        assert rows == []
