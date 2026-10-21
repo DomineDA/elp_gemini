@@ -60,6 +60,7 @@
 <script>
 // 모델·사용자 문자열은 모두 textContent로만 넣는다 (XSS 규칙)
 const pageSize = 20;
+const STATUS_LABEL = { setup: '준비', running: '진행 중', finished: '종료' };
 let currentPage = 1;
 
 function el(tag, className, text) {
@@ -89,7 +90,7 @@ async function loadSessions(page) {
         }
         for (const s of data.sessions || []) {
             const tr = el('tr', 'border-t border-gray-100');
-            for (const value of [s.id, s.username, formatDate(s.created_at), s.persona_count, s.status, s.utterance_count]) {
+            for (const value of [s.id, s.username, formatDate(s.created_at), s.persona_count, STATUS_LABEL[s.status] ?? s.status, s.utterance_count]) {
                 tr.appendChild(el('td', 'px-4 py-2', value));
             }
             const td = el('td', 'px-4 py-2 text-right');
@@ -146,7 +147,7 @@ async function loadDetail(sid) {
         li.appendChild(el('span', 'whitespace-pre-wrap', u.failed ? `(파싱 실패) ${u.content}` : u.content));
         list.appendChild(li);
     }
-    document.getElementById('detailTitle').textContent = `세션 #${state.session.id} · ${state.session.status}`;
+    document.getElementById('detailTitle').textContent = `세션 #${state.session.id} · ${STATUS_LABEL[state.session.status] ?? state.session.status}`;
     document.getElementById('detail').classList.remove('hidden');
 }
 
