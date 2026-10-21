@@ -150,3 +150,75 @@ async def test_dashboard_upload_rejects_file_over_limit(
             await s.execute(select(LessonPlanUpload))
         ).scalars().all()
         assert rows == []
+
+
+def _uploaded_files(tmp_path):
+    return [p for p in (tmp_path / "uploads").rglob("*") if p.is_file()]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload",
+    [b"", b"not a pdf", b"%PDF-1.4\ntruncated"],
+    ids=["empty", "no-signature", "corrupt"],
+)
+async def test_dashboard_upload_rejects_bad_pdf(client, tmp_path, payload):
+    c, session_factory = client
+    files = {"file": ("bad.pdf", BytesIO(payload), "application/pdf")}
+
+    res = await c.post("/dashboard/upload", files=files)
+
+    assert res.status_code == 400
+    assert "손상되었거나 비어" in res.text
+    assert _uploaded_files(tmp_path) == []
+    async with session_factory() as s:
+        rows = (await s.execute(select(LessonPlanUpload))).scalars().all()
+        assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_dashboard_upload_failure_removes_file_and_hides_error(
+    client, tmp_path
+):
+    c, _ = client
+    files = {"file": ("plan.pdf", BytesIO(b"%PDF-1.4\n"), "application/pdf")}
+
+    with (
+        patch("app.routers.views.PdfReader") as mock_reader,
+        patch("app.routers.views.FileSearchService") as mock_fss,
+    ):
+        mock_reader.return_value.pages = []
+        mock_fss.return_value.delete_store_by_display_name = AsyncMock()
+        mock_fss.return_value.upload_document = AsyncMock(
+            side_effect=RuntimeError("secret internal detail")
+        )
+        res = await c.post("/dashboard/upload", files=files)
+
+    assert res.status_code == 500
+    assert "secret internal detail" not in res.text
+    assert _uploaded_files(tmp_path) == []
+
+
+@pytest.mark.asyncio
+async def test_dashboard_upload_failure_after_flush_rolls_back_row(
+    client, tmp_path
+):
+    # get_db 는 정상 반환을 commit 하므로 실패 시 flush 된 행도 남으면 안 된다.
+    c, session_factory = client
+    files = {"file": ("plan.pdf", BytesIO(b"%PDF-1.4\n"), "application/pdf")}
+
+    with (
+        patch("app.routers.views.PdfReader") as mock_reader,
+        patch(
+            "app.routers.views.CriteriaRepository.get_active_criteria",
+            AsyncMock(side_effect=RuntimeError("boom")),
+        ),
+    ):
+        mock_reader.return_value.pages = []
+        res = await c.post("/dashboard/upload", files=files)
+
+    assert res.status_code == 500
+    assert _uploaded_files(tmp_path) == []
+    async with session_factory() as s:
+        rows = (await s.execute(select(LessonPlanUpload))).scalars().all()
+        assert rows == []
