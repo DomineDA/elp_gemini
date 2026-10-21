@@ -117,6 +117,17 @@ async def test_owner_can_fetch_upload(client):
 
 
 @pytest.mark.asyncio
+async def test_owner_can_fetch_filename_with_consecutive_dots(client, tmp_path):
+    # 업로드 sanitizer 는 점을 유지하므로 basename 안의 ".." 는 정상 파일명이다.
+    c, _, ids = client
+    name = "20261021_lesson..pdf"
+    (tmp_path / "uploads" / str(ids[0]) / name).write_bytes(b"%PDF-1.4 x\n")
+    res = await c.get(f"/dashboard/uploads/{name}")
+    assert res.status_code == 200
+    assert res.content.startswith(b"%PDF-1.4")
+
+
+@pytest.mark.asyncio
 async def test_other_user_gets_404(client):
     c, current, ids = client
     current["id"] = ids[1]

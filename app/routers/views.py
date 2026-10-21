@@ -320,7 +320,7 @@ async def serve_upload(
     filename: str, current_user: User = Depends(get_current_user)
 ):
     """본인 업로드 PDF만 제공한다. 타 사용자 파일도 존재 여부를 숨기려 404."""
-    if "/" in filename or "\\" in filename or ".." in filename:
+    if "/" in filename or "\\" in filename or filename in (".", ".."):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
     path = Path("app/static/uploads") / str(current_user.id) / filename
     if not path.is_file():
