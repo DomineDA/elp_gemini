@@ -27,11 +27,10 @@
         {% if prompts %}
         <div class="space-y-3">
             {% for prompt in prompts %}
-            <div class="border rounded-lg p-4 {% if prompt.is_active %}bg-green-50 border-green-300{% endif %}">
+            <div class="border rounded-lg p-4">
                 <div class="flex justify-between items-start">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2 mb-1">
-                            <p class="font-medium">버전 {{ prompt.version }}</p>
                             {% if prompt.type == 'qna' %}
                             <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">QnA</span>
                             {% elif prompt.type == 'evaluation' %}
@@ -43,17 +42,13 @@
                             {% endif %}
                         </div>
                         <p class="text-sm text-gray-600 mt-2">{{ prompt.content[:200] }}{% if prompt.content|length > 200 %}...{% endif %}</p>
-                        <p class="text-xs text-gray-500 mt-2">생성: {{ prompt.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
                     </div>
                     <div class="ml-4 flex items-center space-x-2">
-                        {% if prompt.is_active %}
-                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded text-sm">활성</span>
-                        {% endif %}
-                        <button data-type="{{ prompt.type }}" data-content-id="prompt-content-{{ prompt.id }}" class="edit-btn px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">수정</button>
+                        <button data-type="{{ prompt.type }}" data-content-id="prompt-content-{{ prompt.type }}" class="edit-btn px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">수정</button>
                         <button data-type="{{ prompt.type }}" class="delete-btn px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200">삭제</button>
                     </div>
                 </div>
-                <pre id="prompt-content-{{ prompt.id }}" class="hidden">{{ prompt.content }}</pre>
+                <pre id="prompt-content-{{ prompt.type }}" class="hidden">{{ prompt.content }}</pre>
             </div>
             {% endfor %}
         </div>
