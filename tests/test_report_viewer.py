@@ -63,3 +63,26 @@ def test_report_viewer_exposes_download_link(mock_current_user):
     assert response.status_code == 200
     assert 'href="/api/lessonplan/reports/42/download"' in response.text
     assert "/api/lessonplan/reports/${REPORT_ID}/download" not in response.text
+
+
+def test_report_viewer_shows_error_title_on_load_failure(mock_current_user):
+    app.dependency_overrides[get_current_user] = lambda: mock_current_user
+    try:
+        response = client.get("/reports/view/42")
+    finally:
+        app.dependency_overrides = {}
+
+    assert "보고서를 찾을 수 없습니다" in response.text
+    assert "status = res.status" in response.text
+    assert 'href="/dashboard"' in response.text
+
+
+def test_admin_report_viewer_shows_error_title_on_load_failure():
+    from pathlib import Path
+
+    source = Path("app/templates/admin/admin_report_viewer.html").read_text(
+        encoding="utf-8"
+    )
+    assert "보고서를 찾을 수 없습니다" in source
+    assert "status = res.status" in source
+    assert 'href="/admin/users"' in source
