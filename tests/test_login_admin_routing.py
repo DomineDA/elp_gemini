@@ -294,3 +294,54 @@ def test_session_cookie_helper_signs_within_acceptable_window():
     assert b"user_id" in base64.b64decode(payload)
     # 검증 시점이 너무 떨어지지 않도록 보장
     assert time.time() > 0
+
+
+# #185 — /admin/* 비로그인은 /login/admin, 일반 사용자는 403 안내
+@pytest.mark.asyncio
+async def test_admin_page_with_user_session_renders_403_page():
+    from types import SimpleNamespace
+
+    from app.dependencies import get_current_user
+    from app.middleware.auth_middleware import AuthMiddleware
+
+    cookie = _build_session_cookie(
+        {"user_id": 2, "is_admin": False, "username": "user"}
+    )
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+        id=2, username="user", is_admin=False
+    )
+    try:
+        with patch.object(
+            AuthMiddleware, "_validate_session_in_db", return_value=True
+        ):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="https://test",
+                cookies={settings.SESSION_COOKIE_NAME: cookie},
+            ) as ac:
+                response = await ac.get(
+                    "/admin/users",
+                    headers={"accept": "text/html"},
+                    follow_redirects=False,
+                )
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+    assert response.status_code == 403
+    assert response.headers["content-type"].startswith("text/html")
+    assert "관리자 권한" in response.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("path", "location"),
+    [("/admin/users", "/login/admin"), ("/dashboard", "/login")],
+)
+async def test_html_request_without_session_redirects_by_area(path, location):
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="https://test"
+    ) as ac:
+        response = await ac.get(
+            path, headers={"accept": "text/html"}, follow_redirects=False
+        )
+    assert response.status_code == 302
+    assert response.headers["location"] == location
