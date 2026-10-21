@@ -22,6 +22,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -37,6 +38,7 @@ from app.models.users import User
 from app.rate_limit import limiter
 from app.routers import auth as auth_router
 from app.routers.qna import _session_segment_label_for_user
+from app.schemas.users import RegularUserRegistration, UserCreate
 from app.services.auth_service import AuthService
 
 USER_ID = "teacher01"
@@ -439,13 +441,37 @@ async def test_register_matching_password_confirm_succeeds_directly(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("weak", ["short1", "nodigitshere", "12345678"])
+@pytest.mark.parametrize("weak", ["short1", "nodigitshere", "12345678", "Ab1"])
 async def test_register_weak_password_rejected(
     client, session_factory, weak
 ):
     response = await _register(client, user_id="weakpw", password=weak)
     _assert_form_error(response)
     assert await _fetch_user_by_username(session_factory, "weakpw") is None
+
+
+@pytest.mark.asyncio
+async def test_register_short_password_shows_korean_message(client):
+    """#189: 짧은 비밀번호 오류가 Pydantic 영어 기본 문구가 아니라 한국어."""
+    response = await _register(client, user_id="shortpw", password="Ab1")
+    assert response.status_code == 400
+    assert "비밀번호는 최소 8자 이상이어야 합니다." in response.text
+    assert "at least 8" not in response.text
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: RegularUserRegistration(user_id="shortpw", password="Ab1"),
+        lambda: UserCreate(username="u", nickname="n", password="Ab1"),
+    ],
+)
+def test_password_schemas_report_short_password_in_korean(build):
+    with pytest.raises(ValidationError) as exc_info:
+        build()
+    message = str(exc_info.value)
+    assert "8자" in message
+    assert "at least 8" not in message
 
 
 # ===== 로그인 (Task 2) =====
