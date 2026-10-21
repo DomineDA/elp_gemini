@@ -4,6 +4,7 @@
 """
 import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -675,7 +676,7 @@ class LessonPlanAnalysisService:
     ) -> str:
         """
         보고서 후처리:
-        0. `**분석 모델**:` 줄 제거
+        0. `**분석 모델**:` 줄 제거, `**분석 일시**:` 를 서버 KST 시각으로 기입
         1. 'Vector Search 참고 자료' 섹션이 비구조화된 긴 텍스트일 경우
            목록으로 정리
         2. 'File Search 참고 문서' 섹션을 서버 렌더로 교체 (인자 제공 시).
@@ -702,6 +703,18 @@ class LessonPlanAnalysisService:
                 r'^\s*>\s*(?:-\s*)?\*\*분석\s*모델\*\*\s*:.*$\n?',
                 '',
                 report,
+                flags=re.MULTILINE,
+            )
+
+            # 0-1) 분석 일시는 모델이 알 수 없으므로 서버 KST 시각으로 채운다.
+            now = datetime.now(timezone(timedelta(hours=9))).strftime(
+                "%Y-%m-%d %H:%M"
+            )
+            report = re.sub(
+                r"^(\s*>\s*(?:-\s*)?\*\*분석\s*일시\*\*\s*:).*$",
+                lambda m: f"{m.group(1)} {now}",
+                report,
+                count=1,
                 flags=re.MULTILINE,
             )
 
