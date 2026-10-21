@@ -103,6 +103,20 @@ def test_html_request_without_session_redirects_to_login(
     assert response.headers["location"] == "/login"
 
 
+def test_admin_html_request_without_session_redirects_to_admin_login(
+    client,
+):
+    """/admin/* HTML 요청이고 세션 없으면 /login/admin으로 리다이렉트 (#185)"""
+    response = client.get(
+        "/admin/dashboard",
+        headers={"accept": "text/html"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "/login/admin"
+
+
 @pytest.mark.skip(
     reason="세션 쿠키 설정이 복잡하여 통합 테스트로 이동"
 )

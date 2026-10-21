@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
 from app.db import engine
-from app.middleware import AuthMiddleware
+from app.middleware import AuthMiddleware, login_url_for
 from app.migrations import (
     drop_invite_codes_table,
     drop_user_profiles,
@@ -107,15 +107,11 @@ async def http_exception_handler(
     accept = request.headers.get("accept", "")
     is_html_request = "text/html" in accept.lower()
 
-    # 401/403 오류이고 HTML 요청인 경우 /login 리다이렉트
-    if exc.status_code in (401, 403) and is_html_request:
-        logger.info(
-            f"인증/권한 오류 ({exc.status_code}) → "
-            f"/login 리다이렉트"
-        )
-        return RedirectResponse(
-            url="/login", status_code=302
-        )
+    # 401 + HTML 요청은 로그인 페이지로 (403은 아래 error.html 안내)
+    if exc.status_code == 401 and is_html_request:
+        login_url = login_url_for(request.url.path)
+        logger.info(f"인증 오류 (401) → {login_url} 리다이렉트")
+        return RedirectResponse(url=login_url, status_code=302)
 
     # API 요청인 경우 JSON 응답
     if request.url.path.startswith("/api") or not is_html_request:
