@@ -279,3 +279,17 @@ def test_integration_with_real_file():
     assert any(
         service.has_prompt(p) for p in ["qna", "evaluation"]
     )
+
+
+def test_lesson_analysis_prompt_has_no_leaking_instructions():
+    """보고서에 그대로 복사되던 지시문·날짜 자리표시자가 없다 (#172)."""
+    prompt = PromptLoaderService().get_prompt("lesson_analysis")
+
+    for leaked in (
+        "File Search로 확인한 rubricstore",
+        "검색 결과에 없는 기준",
+        "File Search 평가기준 요약",
+        "[YYYY-MM-DD",
+    ):
+        assert leaked not in prompt, leaked
+    assert "### File Search 참고 문서" in prompt
