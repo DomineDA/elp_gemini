@@ -138,6 +138,7 @@ function renderSessions(totalCount, hasMore) {
     countLabel.textContent = `${totalCount}건`;
     if (!adminSessions.length) {
         list.innerHTML = '<li class="py-4 text-sm text-gray-500">대화가 없습니다.</li>';
+        updateBulkSessionBar();
         return;
     }
     const itemsHtml = adminSessions.map((s) => `
@@ -167,6 +168,7 @@ function renderSessions(totalCount, hasMore) {
     list.querySelectorAll('.session-check').forEach((cb) => {
         cb.addEventListener('change', updateBulkSessionBar);
     });
+    updateBulkSessionBar();
 }
 
 async function loadSessions(offset = 0, append = false) {
@@ -193,6 +195,7 @@ function renderReports(totalCount, hasMore) {
     countLabel.textContent = `${totalCount}건`;
     if (!adminReports.length) {
         list.innerHTML = '<li class="py-4 text-sm text-gray-500">보고서가 없습니다.</li>';
+        updateBulkReportBar();
         return;
     }
     const itemsHtml = adminReports.map((r) => `
@@ -220,6 +223,7 @@ function renderReports(totalCount, hasMore) {
     list.querySelectorAll('.report-check').forEach((cb) => {
         cb.addEventListener('change', updateBulkReportBar);
     });
+    updateBulkReportBar();
 }
 
 async function loadReports(offset = 0, append = false) {
