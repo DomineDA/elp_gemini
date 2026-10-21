@@ -25,6 +25,7 @@ from app.migrations import (
     drop_user_profiles,
     drop_users_email_column,
     ensure_app_state_table,
+    ensure_chat_sessions_document_id_column,
     ensure_criteria_display_alias_column,
     ensure_criteria_file_path_column,
     ensure_criteria_stable_id_column,
@@ -279,6 +280,9 @@ async def startup_event():
         logger.info(
             "lessonplan_uploads / analysis_reports.upload_id 자동 적용"
         )
+
+    if await ensure_chat_sessions_document_id_column(engine):
+        logger.info("chat_sessions.document_id 컬럼 자동 추가")
 
     if await ensure_simulation_tables(engine):
         logger.info("수업 시뮬레이션 테이블 자동 생성")

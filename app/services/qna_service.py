@@ -565,6 +565,7 @@ class QnAService:
         user_id: int,
         title: Optional[str] = None,
         user_type: Optional[str] = None,
+        document_id: Optional[str] = None,
     ) -> ChatSession:
         """
         새 세션 생성
@@ -573,6 +574,7 @@ class QnAService:
             user_id: 사용자 ID
             title: 세션 제목 (선택)
             user_type: 사용자 유형 (1학년, 2학년, 3학년, 4학년, 교사)
+            document_id: 문서 대화 세션의 File Search 문서 경로 (선택)
 
         Returns:
             생성된 ChatSession
@@ -581,6 +583,7 @@ class QnAService:
             user_id=user_id,
             title=title,
             user_type=user_type,
+            document_id=document_id,
         )
         self.db.add(session)
         await self.db.flush()
