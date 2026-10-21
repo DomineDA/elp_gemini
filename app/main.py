@@ -86,9 +86,10 @@ app.add_middleware(
 )
 
 # 정적 파일 및 템플릿 설정 (T016)
+# app/static/uploads/·reports/ 는 사용자 산출물이라 인증 라우트로만 제공 (#168)
 app.mount(
-    "/static",
-    StaticFiles(directory="app/static"),
+    "/static/js",
+    StaticFiles(directory="app/static/js"),
     name="static",
 )
 # Note: /files 정적 마운트 제거 (보안 강화)

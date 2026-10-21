@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,7 +134,7 @@ async def upload_document(
     file_path = user_upload_dir / saved_filename
 
     # 웹 접근 URL
-    file_url = f"/static/uploads/{current_user.id}/{saved_filename}"
+    file_url = f"/dashboard/uploads/{saved_filename}"
 
     try:
         hasher = hashlib.sha256()
@@ -334,3 +334,16 @@ async def view_analysis_report(
             "report_id": report_id,
         },
     )
+
+
+@router.get("/dashboard/uploads/{filename}")
+async def serve_upload(
+    filename: str, current_user: User = Depends(get_current_user)
+):
+    """본인 업로드 PDF만 제공한다. 타 사용자 파일도 존재 여부를 숨기려 404."""
+    if "/" in filename or "\\" in filename or filename in (".", ".."):
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    path = Path("app/static/uploads") / str(current_user.id) / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    return FileResponse(path, media_type="application/pdf")
