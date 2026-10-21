@@ -516,7 +516,7 @@ File Search로 확인한 rubricstore 평가기준 문서를 바탕으로, 실제
 
 **항목**
 - risk_scenarios: 수업에서 생길 수 있는 위험 시나리오입니다. title은 짧은 이름, scene은 어느 국면에서 어떤 장면이 생길 수 있는지, evidence_type은 근거 유형입니다. 대화록에서 그대로 확인되면 "입력 재현", 학생 사이 또는 교사와 학생의 주고받음에서 드러나면 "상호작용", 페르소나 프로필과 지도안 구조를 함께 보아 추론했으면 "프로필·구조 결합"을 고릅니다.
-- utterance_suggestions: 교사 발화 추천입니다. phase_idx는 국면 번호(0부터), actual은 대화록에 있는 실제 교사 발화(응답이 없었던 장면이면 그 상황 설명), suggested는 바꿔 말할 발화, intent는 그 발화의 의도입니다.
+- utterance_suggestions: 교사 발화 추천입니다. phase_idx는 국면 번호(0부터), actual은 대화록에 있는 실제 교사 발화(응답이 없었던 장면이면 그 상황 설명), suggested는 바꿔 말할 발화, intent는 그 발화의 의도입니다. teacher_seq는 인용한 교사 발화 앞의 # 번호이고, actual은 그 발화를 요약하지 말고 그대로 적습니다. 교사 발화가 없던 장면이면 teacher_seq는 null입니다.
 - progress_directions: 수업 활동을 어떤 순서와 흐름으로 진행하면 좋을지에 대한 제안입니다.
 - change_directions: 지도안 수정 제안입니다. kind는 발문, 비계, 자료, 평가 중 하나이고 content는 구체적인 수정 내용입니다.
 

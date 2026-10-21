@@ -6,7 +6,10 @@ import sqlite3
 import pytest
 
 from app.services.simulation import feedback, gemini
-from app.services.simulation.llm_schemas import StudentReaction
+from app.services.simulation.llm_schemas import (
+    StudentReaction,
+    UtteranceSuggestion,
+)
 
 
 def _api(sid, path=""):
@@ -231,3 +234,71 @@ def test_concurrent_generation_returns_first_envelope_and_one_file(
     assert r.status_code == 200
     assert r.json() == {**prior, "cached": True}
     assert [p.name for p in reports.rglob("*.md")] == ["other_reports.md"]
+
+
+def _teacher_seq(client, sid):
+    state = client.get(_api(sid)).json()
+    [seq] = [
+        u["seq"]
+        for u in state["utterances"]
+        if u["speaker_type"] == "teacher" and u["content"] == "질문"
+    ]
+    return seq
+
+
+def _suggest(fake_gemini, teacher_seq):
+    base = fake_gemini.results["feedback"]
+    fake_gemini.results["feedback"] = base.model_copy(
+        update={
+            "utterance_suggestions": [
+                UtteranceSuggestion(
+                    phase_idx=0,
+                    actual="요약문",
+                    suggested="무엇을 알아볼까요?",
+                    intent="흥미 유발",
+                    teacher_seq=teacher_seq,
+                )
+            ]
+        }
+    )
+
+
+def test_actual_is_quoted_verbatim_from_transcript(ready, fake_gemini):
+    """모델이 요약해도 teacher_seq로 대화록 원문을 인용한다 (#178)."""
+    sid = _finished(ready)
+    _suggest(fake_gemini, _teacher_seq(ready, sid))
+
+    r = ready.post(_api(sid, "/feedback"))
+    assert r.status_code == 200
+    assert r.json()["feedback"]["utterance_suggestions"][0]["actual"] == "질문"
+    md = ready.get(_api(sid, "/feedback/download")).text
+    assert "- 실제 발화: 질문" in md
+    assert "요약문" not in md
+
+
+@pytest.mark.parametrize("teacher_seq", [None, 9999])
+def test_actual_keeps_model_text_without_matching_seq(
+    ready, fake_gemini, teacher_seq
+):
+    sid = _finished(ready)
+    _suggest(fake_gemini, teacher_seq)
+
+    r = ready.post(_api(sid, "/feedback"))
+    assert r.status_code == 200
+    assert (
+        r.json()["feedback"]["utterance_suggestions"][0]["actual"] == "요약문"
+    )
+
+
+def test_feedback_input_numbers_teacher_lines(ready, fake_gemini, monkeypatch):
+    sid = _finished(ready)
+    seq = _teacher_seq(ready, sid)
+    prompts = []
+
+    def recording(kind, **kw):
+        prompts.append(kw["user"])
+        return fake_gemini(kind, **kw)
+
+    monkeypatch.setattr(gemini, "call_structured", recording)
+    assert ready.post(_api(sid, "/feedback")).status_code == 200
+    assert f"교사(전체) #{seq}: 질문" in prompts[0]
