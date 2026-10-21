@@ -49,61 +49,10 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="/static/js/safe_markdown.js"></script>
 <script>
     const REPORT_ID = {{ report_id | int }};
-
-    function escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(text);
-        return div.innerHTML;
-    }
-
-    function isSafeMarkdownUrl(rawUrl) {
-        if (!rawUrl) return true;
-        const compact = String(rawUrl).trim().replace(/[\u0000-\u001F\u007F\s]+/g, '');
-        if (!compact) return true;
-        try {
-            const url = new URL(compact, window.location.origin);
-            return ['http:', 'https:', 'mailto:', 'tel:'].includes(url.protocol);
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function sanitizeRenderedMarkdown(html) {
-        const tpl = document.createElement('template');
-        tpl.innerHTML = html;
-        tpl.content.querySelectorAll('*').forEach(el => {
-            Array.from(el.attributes).forEach(attr => {
-                const name = attr.name.toLowerCase();
-                if (name.startsWith('on') || name === 'style') {
-                    el.removeAttribute(attr.name);
-                }
-            });
-        });
-        tpl.content.querySelectorAll('a[href]').forEach(a => {
-            if (!isSafeMarkdownUrl(a.getAttribute('href'))) {
-                a.removeAttribute('href');
-                a.removeAttribute('target');
-                return;
-            }
-            a.setAttribute('rel', 'noopener noreferrer');
-            a.setAttribute('target', '_blank');
-        });
-        tpl.content.querySelectorAll('img[src]').forEach(img => {
-            if (isSafeMarkdownUrl(img.getAttribute('src'))) return;
-            img.replaceWith(document.createTextNode(img.getAttribute('alt') || ''));
-        });
-        return tpl.innerHTML;
-    }
-
-    function renderSafeMarkdown(markdown) {
-        const safe = escapeHtml(markdown || '');
-        const rendered = marked.parse(safe);
-        return sanitizeRenderedMarkdown(rendered);
-    }
 
     function formatDate(iso) {
         if (!iso) return '';
