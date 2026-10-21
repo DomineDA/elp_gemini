@@ -1,16 +1,16 @@
 """
 관리자 - 프롬프트 관리 뷰 라우터
 """
-from datetime import datetime
+import logging
 from dataclasses import dataclass
+
 from fastapi import (
     APIRouter,
-    Request,
     Depends,
     HTTPException,
+    Request,
 )
 from fastapi.responses import HTMLResponse
-import logging
 
 from app.dependencies import get_current_admin
 from app.models.users import User
@@ -43,13 +43,8 @@ def _get_prompt_loader() -> PromptLoaderService:
 class PromptDisplay:
     """템플릿 표시용 프롬프트 데이터"""
 
-    id: int
     type: str
-    version: int
     content: str
-    is_active: bool
-    created_at: datetime
-    created_by: int = 0
 
 
 @router.get(
@@ -72,19 +67,10 @@ async def admin_prompts(
     loader = _get_prompt_loader()
     prompt_types = loader.list_available_prompts()
 
-    prompts = []
-    for idx, ptype in enumerate(
-        prompt_types, start=1
-    ):
-        content = loader.get_prompt(ptype)
-        prompts.append(PromptDisplay(
-            id=idx,
-            type=ptype,
-            version=1,
-            content=content,
-            is_active=True,
-            created_at=datetime.now(),
-        ))
+    prompts = [
+        PromptDisplay(type=ptype, content=loader.get_prompt(ptype))
+        for ptype in prompt_types
+    ]
 
     return templates.TemplateResponse(
         "admin/admin_prompts.html",
