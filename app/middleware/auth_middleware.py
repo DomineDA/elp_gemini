@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 def login_url_for(path: str) -> str:
     """요청 경로에 맞는 로그인 페이지 URL (관리자 영역은 /login/admin)"""
-    return "/login/admin" if path.startswith("/admin") else "/login"
+    is_admin_area = path == "/admin" or path.startswith("/admin/")
+    return "/login/admin" if is_admin_area else "/login"
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
