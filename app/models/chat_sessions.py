@@ -38,10 +38,7 @@ class ChatSession(Base):
         comment="세션 제목 (선택사항)"
     )
     document_id = Column(
-        String(512),
-        nullable=True,
-        index=True,
-        comment="File Search 문서 경로"
+        String(512), nullable=True, index=True, comment="File Search 문서 경로"
     )
     created_at = Column(
         DateTime,
