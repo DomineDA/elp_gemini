@@ -154,7 +154,7 @@ async def test_user_dashboard_and_admin_view_return_same_reports(parity_setup):
 
 
 def _js_function_body(source, start, end):
-    return source[source.index(start):source.index(end)]
+    return source[source.index(start) : source.index(end)]
 
 
 def test_render_resets_bulk_bar_after_list_rerender():
