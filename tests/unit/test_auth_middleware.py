@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.middleware import AuthMiddleware
+from app.middleware import AuthMiddleware, login_url_for
 
 
 # 테스트용 FastAPI 앱 생성
@@ -101,6 +101,20 @@ def test_html_request_without_session_redirects_to_login(
 
     assert response.status_code == 302
     assert response.headers["location"] == "/login"
+
+
+def test_admin_html_request_without_session_redirects_to_admin_login(
+    client,
+):
+    """/admin/* HTML 요청이고 세션 없으면 /login/admin으로 리다이렉트 (#185)"""
+    response = client.get(
+        "/admin/dashboard",
+        headers={"accept": "text/html"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "/login/admin"
 
 
 @pytest.mark.skip(
@@ -350,3 +364,17 @@ async def test_validate_session_db_error():
         )
 
         assert is_valid is False
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/admin", "/login/admin"),
+        ("/admin/users", "/login/admin"),
+        ("/administrator", "/login"),
+        ("/admin-other", "/login"),
+    ],
+)
+def test_login_url_for_matches_admin_segment_only(path, expected):
+    """/admin 경로 세그먼트만 관리자 로그인으로 보낸다 (#185)"""
+    assert login_url_for(path) == expected

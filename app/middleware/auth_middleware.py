@@ -22,6 +22,12 @@ from app.models.users import User
 logger = logging.getLogger(__name__)
 
 
+def login_url_for(path: str) -> str:
+    """요청 경로에 맞는 로그인 페이지 URL (관리자 영역은 /login/admin)"""
+    is_admin_area = path == "/admin" or path.startswith("/admin/")
+    return "/login/admin" if is_admin_area else "/login"
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     """
     전역 인증 미들웨어
@@ -100,12 +106,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         is_admin = request.session.get("is_admin", False)
 
         if not user_id:
-            # 인증되지 않은 HTML 요청 → /login 리다이렉트
+            # 인증되지 않은 HTML 요청 → 로그인 페이지 리다이렉트
+            login_url = login_url_for(path)
             logger.info(
-                f"인증 실패: {path} → /login 리다이렉트"
+                f"인증 실패: {path} → {login_url} 리다이렉트"
             )
             return RedirectResponse(
-                url="/login", status_code=302
+                url=login_url, status_code=302
             )
 
         # DB에서 세션 유효성 검증 (Task 2.2)
@@ -114,7 +121,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         )
 
         if not is_valid:
-            # 무효한 세션 → 세션 정리 후 /login 리다이렉트
+            # 무효한 세션 → 세션 정리 후 로그인 페이지 리다이렉트
             logger.info(
                 f"무효한 세션 정리: "
                 f"user_id={user_id}, "
@@ -122,7 +129,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
             request.session.clear()
             return RedirectResponse(
-                url="/login", status_code=302
+                url=login_url_for(path), status_code=302
             )
 
         # 인증 성공 → 다음 미들웨어/엔드포인트로 진행

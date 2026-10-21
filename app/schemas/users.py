@@ -86,7 +86,6 @@ class UserCreate(BaseModel):
     nickname: str = Field(..., description="닉네임")
     password: str | None = Field(
         None,
-        min_length=8,
         description="비밀번호 (최소 8자, 대소문자 및 숫자 포함)",
     )
     is_admin: bool = Field(default=False, description="관리자 여부")
@@ -119,7 +118,6 @@ class RegularUserRegistration(BaseModel):
     user_id: str = Field(..., description="사용자 지정 아이디")
     password: str = Field(
         ...,
-        min_length=8,
         description="비밀번호 (최소 8자, 문자 및 숫자 포함)",
     )
 

@@ -77,3 +77,11 @@ def test_page_renders_for_admin(client, as_user, admin):
     r = client.get("/admin/simulation/logs")
     assert r.status_code == 200
     assert "/admin/api/simulation/sessions" in r.text
+
+
+def test_status_shown_with_korean_labels(client, as_user, admin):
+    as_user(admin)
+    r = client.get("/admin/simulation/logs")
+    assert "finished: '종료'" in r.text
+    assert "STATUS_LABEL[s.status] ?? s.status" in r.text
+    assert "STATUS_LABEL[state.session.status]" in r.text

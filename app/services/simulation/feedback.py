@@ -89,7 +89,7 @@ async def build_inputs(db: AsyncSession, session: SimulationSession) -> str:
             continue
         if u.speaker_type == "teacher":
             to = names.get(u.target_persona_id)
-            speaker = f"교사({to + '에게' if to else '전체'})"
+            speaker = f"교사({to + '에게' if to else '전체'}) #{u.seq}"
             content = u.content
         else:
             speaker = names[u.persona_id]
@@ -102,6 +102,30 @@ async def build_inputs(db: AsyncSession, session: SimulationSession) -> str:
             f"[{phase_name.get(u.phase_idx, u.phase_idx)}] {speaker}: {content}"
         )
     return "\n".join(lines)
+
+
+async def _quote_actual(
+    db: AsyncSession, session: SimulationSession, fb: dict
+) -> None:
+    """모델이 요약한 actual을 teacher_seq가 가리키는 교사 발화 원문으로 바꾼다.
+
+    번호가 없거나 맞는 교사 발화가 없으면 모델 문자열을 그대로 둔다.
+    """
+    names = {
+        p.id: p.display_name
+        for p in await session_service._personas(db, session.id)
+    }
+    teacher = {
+        u.seq: u
+        for u in await session_service._utterances(db, session.id)
+        if u.speaker_type == "teacher"
+    }
+    for s in fb["utterance_suggestions"]:
+        u = teacher.get(s.get("teacher_seq"))
+        if u is None:
+            continue
+        to = names.get(u.target_persona_id)
+        s["actual"] = f"({to}에게) {u.content}" if to else u.content
 
 
 def _guideline_label(version: int | None) -> str:
@@ -202,8 +226,10 @@ async def generate(db: AsyncSession, session: SimulationSession) -> dict:
         db, session, await guidelines.system_prompt(db, guideline)
     )
 
+    fb = result.parsed.model_dump()
+    await _quote_actual(db, session, fb)
     envelope = {
-        "feedback": result.parsed.model_dump(),
+        "feedback": fb,
         "model_name": result.model,
         "latency_ms": result.latency_ms,
         "guideline_version": version,

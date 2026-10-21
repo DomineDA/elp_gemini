@@ -50,6 +50,8 @@ class UtteranceSuggestion(BaseModel):
     actual: str
     suggested: str
     intent: str
+    # 인용한 교사 발화의 대화록 # 번호. 서버가 actual을 원문으로 바꾼다.
+    teacher_seq: int | None = None
 
 
 class ChangeDirection(BaseModel):

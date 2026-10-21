@@ -19,12 +19,13 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
 from app.db import engine
-from app.middleware import AuthMiddleware
+from app.middleware import AuthMiddleware, login_url_for
 from app.migrations import (
     drop_invite_codes_table,
     drop_user_profiles,
     drop_users_email_column,
     ensure_app_state_table,
+    ensure_chat_sessions_document_id_column,
     ensure_criteria_display_alias_column,
     ensure_criteria_file_path_column,
     ensure_criteria_stable_id_column,
@@ -85,9 +86,10 @@ app.add_middleware(
 )
 
 # 정적 파일 및 템플릿 설정 (T016)
+# app/static/uploads/·reports/ 는 사용자 산출물이라 인증 라우트로만 제공 (#168)
 app.mount(
-    "/static",
-    StaticFiles(directory="app/static"),
+    "/static/js",
+    StaticFiles(directory="app/static/js"),
     name="static",
 )
 # Note: /files 정적 마운트 제거 (보안 강화)
@@ -107,15 +109,11 @@ async def http_exception_handler(
     accept = request.headers.get("accept", "")
     is_html_request = "text/html" in accept.lower()
 
-    # 401/403 오류이고 HTML 요청인 경우 /login 리다이렉트
-    if exc.status_code in (401, 403) and is_html_request:
-        logger.info(
-            f"인증/권한 오류 ({exc.status_code}) → "
-            f"/login 리다이렉트"
-        )
-        return RedirectResponse(
-            url="/login", status_code=302
-        )
+    # 401 + HTML 요청은 로그인 페이지로 (403은 아래 error.html 안내)
+    if exc.status_code == 401 and is_html_request:
+        login_url = login_url_for(request.url.path)
+        logger.info(f"인증 오류 (401) → {login_url} 리다이렉트")
+        return RedirectResponse(url=login_url, status_code=302)
 
     # API 요청인 경우 JSON 응답
     if request.url.path.startswith("/api") or not is_html_request:
@@ -279,6 +277,9 @@ async def startup_event():
         logger.info(
             "lessonplan_uploads / analysis_reports.upload_id 자동 적용"
         )
+
+    if await ensure_chat_sessions_document_id_column(engine):
+        logger.info("chat_sessions.document_id 컬럼 자동 추가")
 
     if await ensure_simulation_tables(engine):
         logger.info("수업 시뮬레이션 테이블 자동 생성")

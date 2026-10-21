@@ -463,15 +463,17 @@ async def chat_with_document(
     """
     try:
         from app.services.qna_service import QnAService
+        from app.services.simulation.lessonplan_source import (
+            get_latest_upload,
+        )
 
         qna_service = QnAService(db)
 
         # 1. 해당 문서에 대한 기존 세션 찾기
-        # title에 document_id를 저장한다고 가정
         result = await db.execute(
             select(ChatSession).where(
                 ChatSession.user_id == _model_int(current_user.id),
-                ChatSession.title == document_id
+                ChatSession.document_id == document_id
             ).order_by(ChatSession.updated_at.desc()).limit(1)
         )
         session = result.scalar_one_or_none()
@@ -481,10 +483,17 @@ async def chat_with_document(
             session_segment = await _session_segment_label_for_user(
                 db, current_user
             )
+            upload = await get_latest_upload(db, _model_int(current_user.id))
+            title = (
+                upload.original_filename
+                if upload and upload.original_filename
+                else document_id.rsplit("/", 1)[-1]
+            )
             session = await qna_service.create_session(
                 user_id=_model_int(current_user.id),
-                title=document_id,
+                title=title[:255],  # chat_sessions.title 길이
                 user_type=session_segment,
+                document_id=document_id,
             )
             await db.commit()
             logger.info(f"새 세션 자동 생성: {session.id} for {document_id}")

@@ -6,10 +6,15 @@ from pathlib import Path
 import pytest
 
 DASHBOARD_TEMPLATE = Path("app/templates/user/dashboard.html")
+SAFE_MARKDOWN_JS = Path("app/static/js/safe_markdown.js")
 
 
 def _dashboard_source() -> str:
     return DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+
+
+def _safe_markdown_source() -> str:
+    return SAFE_MARKDOWN_JS.read_text(encoding="utf-8")
 
 
 def _extract_js_function(source: str, name: str) -> str:
@@ -47,16 +52,15 @@ def test_past_session_assistant_messages_use_safe_markdown_renderer():
     assert "marked.parse(message.content" not in source
 
 
-def test_safe_markdown_renderer_escapes_html_before_marked_parse():
-    source = _dashboard_source()
+def test_safe_markdown_renderer_parses_then_sanitizes():
+    source = _safe_markdown_source()
 
-    assert "const safeInput = escapeHtml(markdown || '');" in source
-    assert "const rendered = marked.parse(safeInput);" in source
-    assert "return sanitizeRenderedMarkdown(rendered);" in source
+    assert "sanitizeRenderedMarkdown(marked.parse(markdown || ''))" in source
+    assert "escapeHtml(" not in source
 
 
 def test_safe_markdown_renderer_blocks_unsafe_markdown_urls():
-    source = _dashboard_source()
+    source = _safe_markdown_source()
 
     assert "function isSafeMarkdownUrl(rawUrl)" in source
     assert "['http:', 'https:', 'mailto:', 'tel:']" in source
@@ -77,7 +81,7 @@ def test_dashboard_history_attribute_contexts_use_attribute_escape():
 
 
 def test_safe_markdown_url_policy_rejects_executable_protocols():
-    source = _dashboard_source()
+    source = _safe_markdown_source()
     function_source = _extract_js_function(source, "isSafeMarkdownUrl")
 
     _run_node_script(f"""

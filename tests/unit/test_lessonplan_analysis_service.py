@@ -360,8 +360,37 @@ class TestLessonPlanAnalysisService:
         # 인접한 다른 헤더 라인은 보존
         assert "**분석 개요**" in processed
         assert "**분석 일시**" in processed
-        assert "2026-05-27 12:34" in processed
+        # 모델이 적은 일시는 서버 시각으로 교체된다 (#172)
+        assert "2026-05-27 12:34" not in processed
         assert "## 1. 교육과정 목표 및 성격과의 부합" in processed
+
+    def test_post_process_injects_server_kst_analysis_date(self, service):
+        """템플릿 자리표시자 `[YYYY-MM-DD HH:MM]`을 서버 KST 시각으로
+        채운다 (#172)."""
+        import re
+        from datetime import datetime, timedelta, timezone
+
+        raw = (
+            "# 수업 지도안 평가 보고서\n\n"
+            "> **분석 개요**\n"
+            "> - **분석 일시**: [YYYY-MM-DD HH:MM]\n"
+            "\n"
+            "## 1. 본문\n"
+        )
+
+        processed = service._post_process_report(raw)
+
+        match = re.search(
+            r"^> - \*\*분석 일시\*\*: (\d{4}-\d{2}-\d{2}) \d{2}:\d{2}$",
+            processed,
+            flags=re.MULTILINE,
+        )
+        assert match, processed
+        assert "[YYYY" not in processed
+        today_kst = datetime.now(timezone(timedelta(hours=9))).strftime(
+            "%Y-%m-%d"
+        )
+        assert match.group(1) == today_kst
 
     def test_post_process_handles_vector_search_section_without_emoji(
         self, service

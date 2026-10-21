@@ -8,8 +8,9 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -133,7 +134,7 @@ async def upload_document(
     file_path = user_upload_dir / saved_filename
 
     # 웹 접근 URL
-    file_url = f"/static/uploads/{current_user.id}/{saved_filename}"
+    file_url = f"/dashboard/uploads/{saved_filename}"
 
     try:
         hasher = hashlib.sha256()
@@ -164,13 +165,33 @@ async def upload_document(
                 status_code=400,
             )
 
+        def bad_pdf_response():
+            file_path.unlink(missing_ok=True)
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "status_code": 400,
+                    "detail": "PDF 파일이 손상되었거나 비어 있습니다.",
+                },
+                status_code=400,
+            )
+
+        with open(file_path, "rb") as f:
+            head = f.read(5)
+        if total_size == 0 or head != b"%PDF-":
+            return bad_pdf_response()
+
         file_hash = hasher.hexdigest()
 
         # PDF 텍스트 추출
-        reader = PdfReader(str(file_path))
-        extracted_text = ""
-        for page in reader.pages:
-            extracted_text += page.extract_text() + "\n"
+        try:
+            reader = PdfReader(str(file_path))
+            extracted_text = ""
+            for page in reader.pages:
+                extracted_text += page.extract_text() + "\n"
+        except PdfReadError:
+            return bad_pdf_response()
 
         # File Search Service 업로드
         file_search_service = FileSearchService()
@@ -238,19 +259,19 @@ async def upload_document(
         )
 
     except Exception as e:
+        # get_db 가 정상 반환을 commit 하므로 flush 된 업로드 행을 되돌린다.
+        await db.rollback()
+        file_path.unlink(missing_ok=True)
         logger.error(f"문서 처리 실패: {str(e)}", exc_info=True)
         return templates.TemplateResponse(
             "error.html",
             {
                 "request": request,
                 "status_code": 500,
-                "detail": f"문서 처리 중 오류가 발생했습니다: {str(e)}",
+                "detail": "문서 처리 중 오류가 발생했습니다.",
             },
             status_code=500,
         )
-    finally:
-        # 파일은 static/uploads에 유지하므로 삭제하지 않음
-        pass
 
 
 @router.post(
@@ -313,3 +334,16 @@ async def view_analysis_report(
             "report_id": report_id,
         },
     )
+
+
+@router.get("/dashboard/uploads/{filename}")
+async def serve_upload(
+    filename: str, current_user: User = Depends(get_current_user)
+):
+    """본인 업로드 PDF만 제공한다. 타 사용자 파일도 존재 여부를 숨기려 404."""
+    if "/" in filename or "\\" in filename or filename in (".", ".."):
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    path = Path("app/static/uploads") / str(current_user.id) / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    return FileResponse(path, media_type="application/pdf")

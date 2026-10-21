@@ -510,7 +510,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="/static/js/safe_markdown.js"></script>
 <script>
     // --- Upload Logic ---
     const dropZone = document.getElementById('dropZone');
@@ -762,65 +763,6 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-    }
-
-    function isSafeMarkdownUrl(rawUrl) {
-        if (!rawUrl) return true;
-
-        const compactUrl = String(rawUrl)
-            .trim()
-            .replace(/[\u0000-\u001F\u007F\s]+/g, '');
-        if (!compactUrl) return true;
-
-        try {
-            const url = new URL(compactUrl, window.location.origin);
-            return ['http:', 'https:', 'mailto:', 'tel:'].includes(
-                url.protocol
-            );
-        } catch (error) {
-            return false;
-        }
-    }
-
-    function sanitizeRenderedMarkdown(html) {
-        const template = document.createElement('template');
-        template.innerHTML = html;
-
-        template.content.querySelectorAll('*').forEach(element => {
-            Array.from(element.attributes).forEach(attribute => {
-                const name = attribute.name.toLowerCase();
-                if (name.startsWith('on') || name === 'style') {
-                    element.removeAttribute(attribute.name);
-                }
-            });
-        });
-
-        template.content.querySelectorAll('a[href]').forEach(link => {
-            if (!isSafeMarkdownUrl(link.getAttribute('href'))) {
-                link.removeAttribute('href');
-                link.removeAttribute('target');
-                return;
-            }
-
-            link.setAttribute('rel', 'noopener noreferrer');
-            link.setAttribute('target', '_blank');
-        });
-
-        template.content.querySelectorAll('img[src]').forEach(image => {
-            if (isSafeMarkdownUrl(image.getAttribute('src'))) return;
-
-            image.replaceWith(
-                document.createTextNode(image.getAttribute('alt') || '')
-            );
-        });
-
-        return template.innerHTML;
-    }
-
-    function renderSafeMarkdown(markdown) {
-        const safeInput = escapeHtml(markdown || '');
-        const rendered = marked.parse(safeInput);
-        return sanitizeRenderedMarkdown(rendered);
     }
 
     function formatDashboardDate(dateStr) {

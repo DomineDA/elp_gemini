@@ -89,10 +89,10 @@ async function loadLogs(page = 1) {
                     <div class="flex items-center gap-3">
                         <!-- 사용자 유형 배지 -->
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getUserTypeBadgeClass(session.user_type)}">
-                            ${session.user_type || '미지정'}
+                            ${escapeHtml(session.user_type || '미지정')}
                         </span>
                         <!-- 세션 제목 -->
-                        <span class="text-gray-900 font-medium">${session.title || '제목 없음'}</span>
+                        <span class="text-gray-900 font-medium">${escapeHtml(session.title || '제목 없음')}</span>
                         <!-- 메시지 수 -->
                         <span class="text-gray-500 text-sm">메시지 ${session.message_count}개</span>
                     </div>

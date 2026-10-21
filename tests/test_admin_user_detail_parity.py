@@ -151,3 +151,33 @@ async def test_user_dashboard_and_admin_view_return_same_reports(parity_setup):
         assert user_ids == admin_ids
     finally:
         app.dependency_overrides.clear()
+
+
+def _js_function_body(source, start, end):
+    return source[source.index(start) : source.index(end)]
+
+
+def test_render_resets_bulk_bar_after_list_rerender():
+    """#183: 삭제 후 재렌더링되면 선택 바도 새 체크박스 상태로 맞춘다."""
+    from pathlib import Path
+
+    source = Path("app/templates/admin/admin_user_detail.html").read_text(
+        encoding="utf-8"
+    )
+    for render, next_fn, update in [
+        (
+            "function renderSessions",
+            "async function loadSessions",
+            "updateBulkSessionBar();",
+        ),
+        (
+            "function renderReports",
+            "async function loadReports",
+            "updateBulkReportBar();",
+        ),
+    ]:
+        body = _js_function_body(source, render, next_fn)
+        empty_branch, _, filled_branch = body.partition("return;")
+        # 전부 삭제된 경우(빈 목록 분기)와 남은 항목이 있는 경우 모두
+        assert update in empty_branch, render
+        assert update in filled_branch, render
