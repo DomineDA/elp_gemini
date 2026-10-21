@@ -29,6 +29,7 @@ from app.migrations import (
     ensure_criteria_file_path_column,
     ensure_criteria_stable_id_column,
     ensure_lessonplan_uploads_table,
+    ensure_simulation_tables,
     ensure_users_lockout_columns,
     rename_chat_session_in_service_teacher_label,
     rename_preservice_university_regions,
@@ -279,6 +280,9 @@ async def startup_event():
             "lessonplan_uploads / analysis_reports.upload_id 자동 적용"
         )
 
+    if await ensure_simulation_tables(engine):
+        logger.info("수업 시뮬레이션 테이블 자동 생성")
+
     renamed = await rename_chat_session_in_service_teacher_label(engine)
     if renamed:
         logger.info(
@@ -329,6 +333,7 @@ from app.routers import (  # noqa: E402
     evaluations,
     lessonplan_analysis,
     qna,
+    simulation,
     views,
 )
 from app.routers.admin import exports as admin_exports  # noqa: E402
@@ -372,6 +377,7 @@ app.include_router(lessonplan_analysis.router)
 app.include_router(views.router)
 app.include_router(admin_router)
 app.include_router(admin_exports.router)
+app.include_router(simulation.router)
 
 
 if __name__ == "__main__":
