@@ -112,11 +112,12 @@ async def test_new_session_uses_upload_filename_and_is_reused(client, user):
 
 
 @pytest.mark.asyncio
-async def test_without_upload_title_is_last_path_segment(client):
+async def test_without_upload_title_is_fixed_label(client):
     await _ask(client)
 
     sessions = await _sessions()
-    assert [s.title for s in sessions] == ["d1"]
+    assert [s.title for s in sessions] == ["업로드한 지도안"]
+    assert "d1" not in sessions[0].title
 
 
 @pytest.mark.asyncio
@@ -133,3 +134,9 @@ async def test_legacy_session_is_reused_after_backfill(client, user):
     assert session_id == legacy.id
     assert len(sessions) == 1
     assert sessions[0].document_id == DOC
+    assert sessions[0].title == "업로드한 지도안"
+    response = await client.get("/api/qna/sessions")
+    assert response.status_code == 200, response.text
+    listed = response.json()["sessions"]
+    assert [s["title"] for s in listed] == ["업로드한 지도안"]
+    assert "fileSearchStores/" not in response.text
