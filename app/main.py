@@ -33,6 +33,7 @@ from app.migrations import (
     ensure_lessonplan_uploads_table,
     ensure_simulation_tables,
     ensure_users_lockout_columns,
+    ensure_users_session_version_column,
     rename_chat_session_in_service_teacher_label,
     rename_preservice_university_regions,
 )
@@ -272,6 +273,10 @@ async def startup_event():
     email_dropped = await drop_users_email_column(engine)
     if email_dropped:
         logger.info("users.email 컬럼이 자동 제거되었습니다.")
+
+    # email 제거의 테이블 재구성이 session_version을 빠뜨리므로 그 뒤에 보정
+    if await ensure_users_session_version_column(engine):
+        logger.info("users.session_version 컬럼 자동 추가")
 
     uploads_patched = await ensure_lessonplan_uploads_table(engine)
     if uploads_patched:
