@@ -75,6 +75,29 @@ function sanitizeRenderedMarkdown(html) {
     return template.innerHTML;
 }
 
+// CommonMark flanking rules reject `**‘관찰’**로` (punctuation, then 조사), so pair `**…**` within a line directly.
+const CJK_STRONG_EXTENSION = {
+    name: 'cjkStrong',
+    level: 'inline',
+    start(src) {
+        return src.indexOf('**');
+    },
+    tokenizer(src) {
+        const m = /^\*\*(?![\s*])([^\n]*?[^\s*])\*\*/.exec(src);
+        if (!m) return undefined;
+        // An odd backtick count means a code span straddles the closing `**`.
+        if ((m[1].split('`').length - 1) % 2) return undefined;
+        return {
+            type: 'strong',
+            raw: m[0],
+            text: m[1],
+            tokens: this.lexer.inlineTokens(m[1])
+        };
+    }
+};
+
+marked.use({ extensions: [CJK_STRONG_EXTENSION] });
+
 function renderSafeMarkdown(markdown) {
     return sanitizeRenderedMarkdown(marked.parse(markdown || ''));
 }
