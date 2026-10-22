@@ -226,8 +226,8 @@ class LessonPlanAnalysisService:
                     legacy_lessonplans = (
                         self.lessonplan_storage.list_lessonplans(user_id)
                     )
-                    has_file_search_documents = (
-                        self._user_file_search_store_has_documents(user_id)
+                    has_file_search_documents = await asyncio.to_thread(
+                        self._user_file_search_store_has_documents, user_id
                     )
                     if not legacy_lessonplans and not has_file_search_documents:
                         return {
@@ -547,7 +547,9 @@ class LessonPlanAnalysisService:
         """
         try:
             # Phase 1의 get_dual_store_ids() 사용
-            store_ids = self.file_search_service.get_dual_store_ids(user_id)
+            store_ids = await asyncio.to_thread(
+                self.file_search_service.get_dual_store_ids, user_id
+            )
             logger.info(f"✅ Store ID 조회 완료: {len(store_ids)}개")
             return store_ids
         except ValueError as e:
