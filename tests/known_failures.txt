@@ -6,25 +6,7 @@
 #       SESSION_HTTPS_ONLY=false TZ=UTC \
 #       uv run --frozen python scripts/ci_ratchet.py tests --update
 # 정리 후속 이슈: #227
-FAILED tests/services/test_lessonplan_analysis_tool_order.py::test_rubric_metadata_filter_omitted_when_none
-FAILED tests/services/test_lessonplan_analysis_tool_order.py::test_user_store_tool_precedes_rubric_tool
-FAILED tests/test_lessonplan_analysis_service.py::TestLessonPlanAnalysisService::test_analyze_lesson_plan_no_stores
-FAILED tests/test_lessonplan_analysis_service.py::TestLessonPlanAnalysisService::test_analyze_lesson_plan_timeout
-FAILED tests/test_lessonplan_analysis_service.py::TestLessonPlanAnalysisService::test_get_store_ids_success
 FAILED tests/test_preservice_region_kyodae_rename.py::test_rename_idempotent
 FAILED tests/test_preservice_region_kyodae_rename.py::test_rename_leaves_unknown_values
 FAILED tests/test_preservice_region_kyodae_rename.py::test_rename_preserves_kornu
 FAILED tests/test_preservice_region_kyodae_rename.py::test_rename_updates_legacy_region
-FAILED tests/test_prompt_loader_service.py::test_get_prompt_exists
-FAILED tests/test_prompt_loader_service.py::test_get_prompt_stats
-FAILED tests/test_prompt_loader_service.py::test_has_prompt
-FAILED tests/test_prompt_loader_service.py::test_list_available_prompts
-FAILED tests/test_prompt_loader_service.py::test_load_prompts
-FAILED tests/test_prompt_loader_service.py::test_malformed_markdown
-FAILED tests/test_prompt_loader_service.py::test_utf8_encoding
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_get_context_api_error
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_get_context_no_active
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_get_context_success
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_get_context_with_k_limit
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_init_no_api_key
-FAILED tests/unit/test_criteria_context_service.py::TestCriteriaContextService::test_init_success
